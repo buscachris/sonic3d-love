@@ -1,0 +1,35 @@
+# Local original game data, analysis and executable-derived translations
+/source/
+/research/
+/captures/
+/game/native/generated/
+/game/movies/
+
+# Native build outputs
+*.o
+*.so
+*.a
+*.dll
+*.dylib
+/game/sonic3d-headless
+
+# Disc images, original executables and packaged game builds
+*.iso
+*.bin
+*.exe
+*.EXE
+*.AVI
+*.love
+
+# Local state and caches
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+*.sav
+*.SAV
+*.log
+.DS_Store
+*~
