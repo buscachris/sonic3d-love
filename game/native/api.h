@@ -21,6 +21,7 @@ int sonic3d_poll_event(Sonic3D *,Sonic3DEvent *);
 const char *sonic3d_sound(Sonic3D *,uint32_t slot);
 const char *sonic3d_movie(Sonic3D *);
 void sonic3d_movie_done(Sonic3D *);
+int sonic3d_quit_requested(Sonic3D *);
 int sonic3d_asset_path(Sonic3D *,const char *,char *,unsigned capacity);
 /* Inspection tools used by the headless verifier and deterministic replays. */
 uint32_t sonic3d_read(Sonic3D *,uint32_t address,unsigned bytes);

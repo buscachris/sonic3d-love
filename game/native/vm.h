@@ -6,6 +6,7 @@
 #include <string.h>
 #include <math.h>
 #include <limits.h>
+#include <float.h>
 
 typedef unsigned __int128 u128;
 typedef __int128 i128;
@@ -45,6 +46,7 @@ typedef struct VM {
     int import_count;
     int file_count;
     struct { void *handle; uint32_t id; } files[64];
+    uint32_t logic_phase;
 } VM;
 
 uint32_t vm_fault(VM *, uint32_t pc, const char *message);
@@ -111,13 +113,49 @@ static inline uint64_t vm_div(VM *v,uint64_t a,uint64_t b,unsigned size,int sign
 static inline long double fp_read(u128 x,unsigned n) {
     if(n==4) { float f; memcpy(&f,&x,4); return f; }
     if(n==8) { double f; memcpy(&f,&x,8); return f; }
+#if LDBL_MANT_DIG == 64 && LDBL_MAX_EXP == 16384 && !defined(SONIC3D_PORTABLE_X87)
     long double f=0; memcpy(&f,&x,10); return f;
+#else
+    /* The original PC stores x87 80-bit values. ARM64 long double is IEEE
+       binary128, so copying those ten bytes into it changes their meaning. */
+    uint64_t significand=(uint64_t)x;
+    unsigned exponent=(unsigned)(x>>64)&0x7fff;
+    long double f;
+    if(exponent==0x7fff)
+        f=(significand==UINT64_C(0x8000000000000000)) ? INFINITY : NAN;
+    else if(exponent && !(significand>>63)) f=NAN;
+    else f=ldexpl((long double)significand,(int)(exponent ? exponent : 1)-16383-63);
+    return (x>>79)&1 ? -f : f;
+#endif
 }
 static inline u128 fp_write(long double f,unsigned n) {
     u128 x=0;
     if(n==4) { float a=(float)f; memcpy(&x,&a,4); }
     else if(n==8) { double a=(double)f; memcpy(&x,&a,8); }
+#if LDBL_MANT_DIG == 64 && LDBL_MAX_EXP == 16384 && !defined(SONIC3D_PORTABLE_X87)
     else memcpy(&x,&f,10);
+#else
+    else {
+        u128 sign=(u128)(signbit(f)!=0)<<79;
+        if(isnan(f)) return sign|((u128)0x7fff<<64)|UINT64_C(0xc000000000000000);
+        if(isinf(f)) return sign|((u128)0x7fff<<64)|UINT64_C(0x8000000000000000);
+        if(f==0) return sign;
+        int exponent;
+        long double fraction=frexpl(fabsl(f),&exponent);
+        exponent+=16382;
+        long double significand;
+        if(exponent<=0) {
+            significand=nearbyintl(ldexpl(fabsl(f),16445));
+            exponent=significand>=0x1p63L ? 1 : 0;
+        } else {
+            significand=nearbyintl(ldexpl(fraction,64));
+            if(significand>=0x1p64L) { significand=0x1p63L; exponent++; }
+        }
+        if(exponent>=0x7fff)
+            return sign|((u128)0x7fff<<64)|UINT64_C(0x8000000000000000);
+        x=sign|((u128)(unsigned)exponent<<64)|(uint64_t)significand;
+    }
+#endif
     return x;
 }
 static inline long double fp_round(VM *v,long double f) {

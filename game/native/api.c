@@ -27,6 +27,7 @@ void sonic3d_destroy(Sonic3D *s) {
     free(v->mem);free(v);
 }
 int sonic3d_step(Sonic3D *s,uint32_t buttons) {return vm_tick(vm(s),buttons);}
+int sonic3d_quit_requested(Sonic3D *s) {return m4(vm(s),0xa05260,0)!=0;}
 const uint8_t *sonic3d_pixels(Sonic3D *s) {return vm(s)->rgba;}
 const char *sonic3d_error(Sonic3D *s) {return s?vm(s)->error:"Cannot allocate the game runtime";}
 void sonic3d_info(Sonic3D *s,Sonic3DInfo *out) {

@@ -170,8 +170,26 @@ int vm_tick(VM *v,uint32_t keys) {
                                       0x777580,0x777581,0x777582};
     for(unsigned i=0;i<sizeof byte_addr/sizeof byte_addr[0];++i) v->mem[byte_addr[i]]=(keys>>i)&1;
     sm4(v,0x777790,0,0);
+    /* The original switches off motion smoothing for the special stages and
+     * credits and sets a 32/33 ms logic interval. Keep their native cadence
+     * while the frontend, palette timer, and CD clock continue at 60 Hz. */
+    uint32_t interval=m4(v,0xa05968,0);
+    int update=1;
+    if(!m4(v,0xa0596c,0) && interval>=32 && interval<=1000) {
+        v->logic_phase+=1000;
+        update=v->logic_phase>=interval*60;
+        if(update) v->logic_phase-=interval*60;
+    } else v->logic_phase=0;
     sm4(v,0x4bcc48,1,0);
-    if (!vm_call(v,0x48aba4)) return 0;
+    if (update) {
+        /* Preserve the original main loop's (0x49fadc) boss-flash cleanup.
+         * Sprite rendering advances this counter during an active flash.
+         * If it stops advancing, clear it so an odd value cannot leave
+         * palette-bank-3 sprites using the boss palette in the next zone. */
+        sm4(v,0xa05268,m4(v,0xa05264,0),0);
+        if (!vm_call(v,0x48aba4)) return 0;
+        if (m4(v,0xa05264,0)==m4(v,0xa05268,0)) sm4(v,0xa05264,0,0);
+    }
     /* DirectDraw consumes this flag when presenting the palette. */
     v->mem[0x777564]=0;
     vm_present(v);

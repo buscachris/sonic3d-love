@@ -31,6 +31,7 @@ class Game:
             "info": (None, [C.c_void_p, C.POINTER(Info)]),
             "poll_event": (C.c_int, [C.c_void_p, C.POINTER(Event)]),
             "movie_done": (None, [C.c_void_p]),
+            "quit_requested": (C.c_int, [C.c_void_p]),
             "read": (C.c_uint32, [C.c_void_p, C.c_uint32, C.c_uint]),
             "write": (C.c_int, [C.c_void_p, C.c_uint32, C.c_uint32, C.c_uint]),
             "call": (C.c_int, [C.c_void_p] + [C.c_uint32] * 5),
@@ -133,14 +134,19 @@ class Game:
 
     def new_game(self, level=1):
         """Drive New Game through the original title; select its existing level index."""
-        self.until(lambda g: g.state == (1, 6))
+        self.until(lambda g: g.state in ((1, 6), (1, 7)))
         self.step(frames=120)
+        self.write(0x779704, 0)
         self.write(0x4bdf00, level)
         self.step(START)
         self.step()
         self.until(lambda g: g.info.state == 10000)
         self.until(lambda g: g.read(0x61071c) == 0, limit=600)
         self.step(frames=10)
+
+    @property
+    def quit_requested(self):
+        return bool(self.lib.sonic3d_quit_requested(self.handle))
 
     @property
     def sonic(self):

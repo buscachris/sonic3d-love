@@ -2,13 +2,16 @@ local Movie = {}
 Movie.__index = Movie
 
 function Movie.new(core)
-    assert(love.filesystem.getInfo("movies/index.lua"),
-           "Movie frames are missing. Run python3 tools/prepare_movies.py in the project directory.")
-    return setmetatable({core=core, index=love.filesystem.load("movies/index.lua")()}, Movie)
+    return setmetatable({core=core}, Movie)
 end
 
 function Movie:start(name)
     self:stop()
+    if not self.index then
+        assert(love.filesystem.getInfo("movies/index.lua"),
+               "Movie frames are missing. Run python3 tools/prepare_movies.py in the project directory.")
+        self.index = love.filesystem.load("movies/index.lua")()
+    end
     local key = name:gsub("\\", "/"):match("([^/]+)%.[^.]+$"):lower()
     self.meta = assert(self.index[key], "Unknown original movie: " .. name)
     self.directory = "movies/" .. key

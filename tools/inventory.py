@@ -16,7 +16,7 @@ def describe(path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--iso', type=Path, default=Path('/home/anon/Sonic3D.iso'))
+    ap.add_argument('--iso', type=Path, default=Path('Sonic3D.iso'))
     args = ap.parse_args()
     manifest = {
         'disc': {'path': str(args.iso), **describe(args.iso)},

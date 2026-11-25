@@ -18,6 +18,7 @@ int sonic3d_poll_event(Sonic3D *,Sonic3DEvent *);
 const char *sonic3d_sound(Sonic3D *,uint32_t);
 const char *sonic3d_movie(Sonic3D *);
 void sonic3d_movie_done(Sonic3D *);
+int sonic3d_quit_requested(Sonic3D *);
 int sonic3d_asset_path(Sonic3D *,const char *,char *,unsigned);
 ]]
 
@@ -27,7 +28,8 @@ Core.__index = Core
 function Core.new(source, verbose)
     local self = setmetatable({}, Core)
     local directory = love.filesystem.getSource()
-    self.lib = ffi.load(directory .. "/libsonic3d.so")
+    self.lib = ffi.load(love.system.getOS() == "Android" and "libsonic3d.so"
+                        or directory .. "/libsonic3d.so")
     self.handle = self.lib.sonic3d_create(source, verbose or 0)
     assert(self.handle ~= nil, "Unable to allocate the native game core")
     ffi.gc(self.handle, self.lib.sonic3d_destroy)
@@ -74,6 +76,10 @@ end
 
 function Core:movieDone()
     self.lib.sonic3d_movie_done(self.handle)
+end
+
+function Core:quitRequested()
+    return self.lib.sonic3d_quit_requested(self.handle) ~= 0
 end
 
 function Core:assetPath(name)

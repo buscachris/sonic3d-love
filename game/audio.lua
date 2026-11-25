@@ -20,7 +20,9 @@ function Audio:sound(slot, flags)
     local sound = self.sounds[name]
     if not sound then
         local path = self.core:assetPath(name)
-        sound = {data=love.sound.newSoundData(fileData(path)), voices={}}
+        local data = fileData(path)
+        sound = {data=love.sound.newSoundData(data), voices={}}
+        data:release()
         self.sounds[name] = sound
     end
     -- DirectSound's original bank has twelve independent buffers per effect.
@@ -41,7 +43,8 @@ end
 
 function Audio:stopSounds()
     for _, sound in pairs(self.sounds) do
-        for _, voice in ipairs(sound.voices) do voice:stop() end
+        for _, voice in ipairs(sound.voices) do voice:stop(); voice:release() end
+        sound.data:release()
     end
     self.sounds = {}
 end
@@ -50,7 +53,9 @@ function Audio:music(track, seconds)
     if self.bgm then self.bgm:stop(); self.bgm:release(); self.bgm = nil end
     if track == 0 then return end
     local name = self.source .. string.format("/Music/%02d.ogg", track)
-    self.bgm = love.audio.newSource(fileData(name), "stream")
+    local data = fileData(name)
+    self.bgm = love.audio.newSource(data, "stream")
+    data:release()
     if seconds > 0 then self.bgm:seek(seconds, "seconds") end
     -- Track restarts and pause/resume seeks come from the original CD routines.
     self.bgm:play()

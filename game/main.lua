@@ -2,8 +2,12 @@ local bit = require("bit")
 local Core = require("core")
 local Audio = require("audio")
 local Movie = require("movie")
+local Touch = require("touch")
+local Assets = require("assets")
 
 local game, audio, movie, image, pixels
+local installer, loadingIcon
+local lastButtons = 0
 local accumulator, elapsed, focused = 0, 0, true
 local options = {}
 local step = 1 / 60
@@ -15,7 +19,8 @@ local function arguments(args)
         if name == "--source" or name == "--quit-after" or name == "--capture" or name == "--replay" then
             i = i + 1
             options[name:sub(3)] = assert(args[i], "Missing value for " .. name)
-        elseif name == "--skip-movies" or name == "--verbose" then options[name:sub(3)] = true
+        elseif name == "--skip-movies" or name == "--verbose" or name == "--touch-controls" then
+            options[name:sub(3)] = true
         end
         i = i + 1
     end
@@ -49,7 +54,7 @@ local function buttons()
             if y < -0.35 then result = bit.bor(result, 16) elseif y > 0.35 then result = bit.bor(result, 32) end
         end
     end
-    return result
+    return bit.bor(result, Touch.read())
 end
 
 local function events()
@@ -78,12 +83,7 @@ local function refresh()
     image:replacePixels(pixels)
 end
 
-function love.load(args)
-    arguments(args)
-    local directory = love.filesystem.getSource()
-    local source = options.source or os.getenv("SONIC3D_SOURCE") or directory .. "/../source"
-    love.graphics.setDefaultFilter("nearest", "nearest")
-    love.keyboard.setKeyRepeat(false)
+local function start(source)
     game = Core.new(source, options.verbose and 1 or 0)
     audio = Audio.new(game, source)
     movie = Movie.new(game)
@@ -96,8 +96,36 @@ function love.load(args)
     refresh()
 end
 
+function love.load(args)
+    arguments(args)
+    local osname = love.system.getOS()
+    Touch.enabled = osname == "Android" or osname == "iOS" or options["touch-controls"] == true
+    love.graphics.setDefaultFilter("nearest", "nearest")
+    love.keyboard.setKeyRepeat(false)
+    if osname == "Android" then
+        installer = Assets.new()
+        loadingIcon = love.graphics.newImage("icons/sonic.png")
+        loadingIcon:setFilter("linear", "linear")
+    else
+        start(options.source or os.getenv("SONIC3D_SOURCE") or love.filesystem.getSource() .. "/../source")
+    end
+end
+
 function love.update(dt)
     if not focused then return end
+    if installer then
+        -- Yield between batches so Android keeps drawing and processing input.
+        local deadline = love.timer.getTime() + 0.008
+        repeat
+            if installer:step() then
+                start(installer.root)
+                installer = nil
+                loadingIcon:release(); loadingIcon = nil
+                return
+            end
+        until love.timer.getTime() >= deadline
+        return
+    end
     accumulator = accumulator + math.min(dt, 0.25)
     local updates = 0
     while accumulator >= step and updates < 15 do
@@ -108,8 +136,11 @@ function love.update(dt)
                 if elapsed >= press[1] and elapsed < press[1] + press[2] then keys = bit.bor(keys, press[3]) end
             end
         end
+        if movie.active and bit.band(keys, bit.bnot(lastButtons), 15) ~= 0 then movie:finish() end
+        lastButtons = keys
         game:step(keys)
         events()
+        if game:quitRequested() then love.event.quit(); return end
         movie:update(step)
         elapsed, updates = elapsed + 1, updates + 1
         accumulator = accumulator - step
@@ -131,10 +162,27 @@ end
 
 function love.draw()
     love.graphics.clear(0, 0, 0, 1)
+    if installer then
+        local width, height = love.graphics.getDimensions()
+        love.graphics.clear(0.025, 0.06, 0.16, 1)
+        love.graphics.setColor(1, 1, 1, 1)
+        local size = height * 0.52
+        love.graphics.draw(loadingIcon, (width - size) / 2, height * 0.06, 0,
+            size / loadingIcon:getWidth(), size / loadingIcon:getHeight())
+        local scale = math.max(1, height / 360)
+        love.graphics.printf("Preparing Sonic 3D Blast", 0, height * 0.64, width / scale, "center", 0, scale, scale)
+        local barWidth = math.min(width * 0.55, height)
+        love.graphics.setColor(1, 1, 1, 0.2)
+        love.graphics.rectangle("fill", (width - barWidth) / 2, height * 0.76, barWidth, 6 * scale)
+        love.graphics.setColor(1, 0.75, 0.15, 1)
+        love.graphics.rectangle("fill", (width - barWidth) / 2, height * 0.76,
+            barWidth * installer:progress(), 6 * scale)
+        return
+    end
     if not image then return end
     local width, height = love.graphics.getDimensions()
     local scale = math.min(width / game.width, height / game.height)
-    if scale >= 1 then scale = math.floor(scale) end
+    if not Touch.enabled and scale >= 1 then scale = math.floor(scale) end
     local x, y = math.floor((width - game.width * scale) / 2), math.floor((height - game.height * scale) / 2)
     love.graphics.push()
     love.graphics.translate(x, y)
@@ -142,6 +190,7 @@ function love.draw()
     love.graphics.setColor(1, 1, 1, 1)
     if movie.active then movie:draw(game.width, game.height) else love.graphics.draw(image) end
     love.graphics.pop()
+    Touch.draw()
 end
 
 function love.keypressed(key)
@@ -153,6 +202,7 @@ end
 function love.focus(hasFocus)
     focused = hasFocus or options["quit-after"] ~= nil
     accumulator = 0
+    lastButtons = 0
     if audio then
         if focused then audio:resume() else audio:pause() end
     end
