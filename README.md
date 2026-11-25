@@ -1,10 +1,10 @@
 # Sonic 3D Blast — native core with LÖVE
 
-An executable reconstruction of the supplied PC version of Sonic 3D Blast. The original x86 game logic is translated ahead of time into C; LÖVE provides the window, input, sound, music and movie playback. The native core retains the original game routines and data formats. This is an experimental port: complete 1:1 fidelity has **not** been established.
+I’m reconstructing the PC version of Sonic 3D Blast so I can run it through LÖVE. I translate the original x86 game logic into C ahead of time and use LÖVE for the window, input, audio, and movies. The port runs the original routines and reads the original data formats. I’m still checking how closely its timing and behavior match the PC game.
 
 ## Screenshots
 
-These 320 × 224 frames come from the running PC reconstruction. The Green Grove capture comes from an input replay. The other three show stages loaded during validation. The original game artwork belongs to its respective rights holders. [Game material notice](NOTICE)
+I captured these frames from my running PC reconstruction at its native 320 × 224 resolution. In regular stages, the `RINGS` label flashes when the count is zero. I chose frames that show the label and count at the top, plus lives and the five Flicky slots at the bottom. In the special stage, the HUD shows 36 rings toward a target of 100. The original game artwork belongs to its respective rights holders. [Game material notice](NOTICE)
 
 | Green Grove | Spring Stadium |
 | --- | --- |
@@ -12,7 +12,7 @@ These 320 × 224 frames come from the running PC reconstruction. The Green Grove
 
 | Diamond Dust | Special stage |
 | --- | --- |
-| ![Sonic beside a snow-covered tree and an icy wall in Diamond Dust](docs/screenshots/diamond-dust.png) | ![Sonic runs down a purple half-pipe toward a line of rings](docs/screenshots/special-stage.png) |
+| ![Sonic on an icy path in Diamond Dust with three rings and three lives](docs/screenshots/diamond-dust.png) | ![Sonic runs down a purple half-pipe toward a line of rings](docs/screenshots/special-stage.png) |
 
 ## Play on this machine
 
