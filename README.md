@@ -2,6 +2,18 @@
 
 An executable reconstruction of the supplied PC version of Sonic 3D Blast. The original x86 game logic is translated ahead of time into C; LÖVE provides the window, input, sound, music and movie playback. The native core retains the original game routines and data formats. This is an experimental port: complete 1:1 fidelity has **not** been established.
 
+## Screenshots
+
+These 320 × 224 frames come from the running PC reconstruction. The Green Grove capture comes from an input replay. The other three show stages loaded during validation. The original game artwork belongs to its respective rights holders. [Game material notice](NOTICE)
+
+| Green Grove | Spring Stadium |
+| --- | --- |
+| ![Sonic on a tiled path among palm trees in Green Grove](docs/screenshots/green-grove.png) | ![Sonic among colorful floor tiles and bumpers in Spring Stadium](docs/screenshots/spring-stadium.png) |
+
+| Diamond Dust | Special stage |
+| --- | --- |
+| ![Sonic beside a snow-covered tree and an icy wall in Diamond Dust](docs/screenshots/diamond-dust.png) | ![Sonic runs down a purple half-pipe toward a line of rings](docs/screenshots/special-stage.png) |
+
 ## Play on this machine
 
 ```sh
